@@ -3,7 +3,8 @@ import os
 import sys
 import subprocess
 import time
-from pyautogui import confirm,prompt 
+from pyautogui import confirm,prompt
+import easygui
 subprocess.call('', shell=True)
 #DEFAULT SETTINGS:
 setting_loop         = True
@@ -18,7 +19,10 @@ img = "NONE"
 First_Time = True
 delay = 0
 PROGRAM_NAME = "VID2ASCII"
-
+def shutdown(reason):
+    print(str(reason) + ", closing program")
+    exit()
+    
 def YN(_ask): 
     ans = confirm(text=_ask, title=PROGRAM_NAME, buttons=['Yes', 'No',"Quit"])
     if ans == "Yes":
@@ -26,44 +30,57 @@ def YN(_ask):
     elif ans == "No":
         return False
     else:
-        exit()
+        shutdown("User selected the quit option, closing program")
 
-try: #Check if user passed a video or not, so we dont waste no time
-    x =(sys.argv[1])
+try: # Check if user passed a video or not, so we dont waste no time
+    img =(sys.argv[1])
 except:
-    print("There was no video passed into the program, please drag and drop a mp4 file onto this executable.")
-    while True:
-        x = input("")
-
-setting_output = confirm(text="Do you want to play the video here or extract the frames into files?", title=PROGRAM_NAME, buttons=['View video','Extract frames', "Quit"])
-if setting_output == 'Extract frames':
+    print("No file passed in, opening file explorer...")
+    img = easygui.fileopenbox()
+    if str(img) == "None":
+        shutdown("User closed the file explorer, or did not select a file, closing program")
+# MODE SELECTOR
+ans = confirm(text="Welcome to {}, please press one of the buttons below to get started!".format(PROGRAM_NAME), title=PROGRAM_NAME, buttons=["Playback with Ascii","Save frames as a txt file","Custom mode","Quit"])
+if ans == "Save frames as a txt file":
     setting_output = True
-    setting_color = YN("Do you want the output to include color Ascii escape codes? (Color text not supported by Notepad)")
-elif setting_output == "View video":
-    setting_output = False
+elif ans == "Custom mode":
+    setting_output = confirm(text="Do you want to play the video here or extract the frames into files?", title=PROGRAM_NAME, buttons=['View video','Extract frames', "Quit"])
+    if setting_output == 'Extract frames':
+        setting_output = True
+        setting_color = YN("Do you want the output to include color Ascii escape codes? (Color text not supported by Notepad)")
+    elif setting_output == "View video":
+        setting_output = False
+    else:
+        shutdown("User selected the quit option, closing program")
+    if setting_output == False:
+        setting_loop  = YN("Do you want the video to loop?")
+        setting_color = YN("Do you want the video to have color? \n(This may create alot of lag)")    
+    if YN("Do you want to enter a custom character set?"):
+        setting_asciichars = prompt(text='Please enter the Ascii characters you want to use.\nPlease enter them in sorted from "smallest" to "biggest", e.g ". o @"\nSeperate them with a spacebar', title=PROGRAM_NAME , default='').split(" ")    
+    setting_scale = (int(prompt(text="Please enter how much % of the original resolution should be kept \n('100' would mean every pixel in the video will be ascii character)\n10 - 20 is the recommended for most videos, the only limit is the limit of the console.", title=PROGRAM_NAME , default="10")) / 100)
+elif ans == "Quit" or ans == "None":
+    shutdown("User selected the quit option or the buttonpress returned as 'None', closing program")
 else:
-    print("User selected the quit option, closing program")
-    exit()
-
-if setting_output == False:
-    setting_loop  = YN("Do you want the video to loop?")
-    setting_color = YN("Do you want the video to have color? \n(This may create alot of lag)")    
-if YN("Do you want to enter a custom character set?"):
-    setting_asciichars = prompt(text='Please enter the Ascii characters you want to use.\nPlease enter them in sorted from "smallest" to "biggest", e.g ". o @"\nSeperate them with a spacebar', title=PROGRAM_NAME , default='').split(" ")
+    pass
 if setting_output:
     dirName = 'frames'
     try:
-        os.mkdir(dirName) 
+        os.mkdir(dirName) # Make folder for frames
     except FileExistsError:
         pass
-#Frame 2 ascii converter function:
+
+# Frame 2 ascii converter function:
 def frame_2_ascii(image_input,image_size,COLOR): 
     def rgbme(rgbin): #Script to color text (New and simple)
         if COLOR:
             return ("\033[38;2;{};{};{}m".format(rgbin[0],rgbin[1],rgbin[2]))
         else:
             return ""
-    WORKING_IMAGE = image_input.copy()   
+    if COLOR:
+        WORKING_IMAGE_PRE_RGB = image_input.copy()   
+        WORKING_IMAGE = cv2.cvtColor(WORKING_IMAGE_PRE_RGB, cv2.COLOR_BGR2RGB)
+    else:
+        WORKING_IMAGE = image_input.copy()   
     BW = []
     for y in WORKING_IMAGE:
         for x in y:
@@ -98,15 +115,7 @@ def frame_2_ascii(image_input,image_size,COLOR):
             print(line)
 
 def main():
-    global First_Time,delay,img,Status,vidcap,settings_output
-    if First_Time:
-        while img == "NONE":
-            img = "NONE"
-            try:
-                img = sys.argv[1]
-            except:
-                print("Please drag and drop a valid mp4 file onto this python file")
-                x = input("")
+    global First_Time,delay,img,Status,vidcap,settings_output,FILE
     vidcap = cv2.VideoCapture(img)
     fps = vidcap.get(cv2.CAP_PROP_FPS) 
     success,image = vidcap.read()
