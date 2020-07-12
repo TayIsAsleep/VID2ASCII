@@ -68,25 +68,24 @@ if setting_output:
         os.mkdir(dirName) # Make folder for frames
     except FileExistsError:
         pass
-
 # Frame 2 ascii converter function:
 def frame_2_ascii(image_input,image_size,COLOR): 
     def rgbme(rgbin): #Script to color text (New and simple)
         if COLOR:
-            return ("\033[38;2;{};{};{}m".format(rgbin[0],rgbin[1],rgbin[2]))
+            return ("\033[38;2;{};{};{}m".format(rgbin[0],rgbin[1],rgbin[2])) #Returns ascii escape code with rgb 
         else:
             return ""
     if COLOR:
-        WORKING_IMAGE_PRE_RGB = image_input.copy()   
+        WORKING_IMAGE_PRE_RGB = image_input.copy()  #Converts the image to RGB format  
         WORKING_IMAGE = cv2.cvtColor(WORKING_IMAGE_PRE_RGB, cv2.COLOR_BGR2RGB)
     else:
-        WORKING_IMAGE = image_input.copy()   
+        WORKING_IMAGE = image_input.copy()    #Creates a clone of the frame to work with
     BW = []
     for y in WORKING_IMAGE:
         for x in y:
-            BW.append(int((int(x[0])+int(x[1])+int(x[2]))/3))   
+            BW.append(int((int(x[0])+int(x[1])+int(x[2]))/3)) #Generates b&w luma values (not using the standard values for simplicity)
     output_list = []
-    for i in BW:
+    for i in BW: #Selects what ascii character to use, based on the luma values generated above
         _c = False
         _a = 1
         while _c != True:
@@ -97,61 +96,60 @@ def frame_2_ascii(image_input,image_size,COLOR):
                 _a += 1        
     string = ""
     count = 0    
-    if setting_output:
+    if setting_output: #prepares a text file if it needs to output to one
         txt = open(dirName + "/frame{}.txt".format(int(vidcap.get(cv2.CAP_PROP_POS_FRAMES))),"w+")
     else:
-        os.system("cls")
+        os.system("cls") #removes the last frame, and clears the screen
     for y in range(len(WORKING_IMAGE)):
         line = ""
         for x in range(len(WORKING_IMAGE[y])):
-            line = line + rgbme(((WORKING_IMAGE[y])[x])) + str(output_list[count]) + rgbme([255,255,255])
+            line = line + rgbme(((WORKING_IMAGE[y])[x])) + str(output_list[count]) + rgbme([255,255,255]) #Combines the rgb value, ascii character, and then resets the color
             if setting_output and setting_out_progress:
-                sys.stdout.write("\rCompleted Frame {} out of {} ".format(int(vidcap.get(cv2.CAP_PROP_POS_FRAMES)),int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))))
+                sys.stdout.write("\rCompleted Frame {} out of {} ".format(int(vidcap.get(cv2.CAP_PROP_POS_FRAMES)),int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT)))) #Updates progress bar if its on
                 sys.stdout.flush()
             count += 1      
         if setting_output:
-            txt.writelines(line + "\n")
+            txt.writelines(line + "\n") #If set to output, it puts the line in the txt file
         else:
-            print(line)
+            print(line) #Renders the line on screen
 
 def main():
     global First_Time,delay,img,Status,vidcap,settings_output,FILE
-    vidcap = cv2.VideoCapture(img)
-    fps = vidcap.get(cv2.CAP_PROP_FPS) 
-    success,image = vidcap.read()
+    vidcap = cv2.VideoCapture(img) #sets 'vidcap' as the video
+    fps = vidcap.get(cv2.CAP_PROP_FPS) #Gets framerate of video
+    success,image = vidcap.read() #Gets first frame of the video
     vid_res_x = int((len(image[0]) * 1   ) * SCALE)
     vid_res_y = int((len(image)    * 0.51) * SCALE)
-    scaled_frame = cv2.resize(image,(vid_res_x,vid_res_y),fx=0,fy=0, interpolation = cv2.INTER_CUBIC)   
-    if First_Time:
+    scaled_frame = cv2.resize(image,(vid_res_x,vid_res_y),fx=0,fy=0, interpolation = cv2.INTER_CUBIC) #Scales the frame to the correct size
+    if First_Time: #This code is ran once at startup, and it sets some values, so that they dont have to be calculated every frame
         if setting_output == False:
-            os.system('mode con: cols={} lines={}'.format(vid_res_x,vid_res_y + 1))
-        start_time = time.time()
-        frame_2_ascii((cv2.resize(image,(vid_res_x,vid_res_y),fx=0,fy=0, interpolation = cv2.INTER_CUBIC)),[vid_res_x,vid_res_y],setting_color)
-        delay = (1-((time.time()-start_time)*fps)) / fps
+            os.system('mode con: cols={} lines={}'.format(vid_res_x,vid_res_y + 1)) #Sets console size
+        start_time = time.time() #Starts time measurement, that will be used to decide the delay to keep the framerate stable
+        frame_2_ascii((cv2.resize(image,(vid_res_x,vid_res_y),fx=0,fy=0, interpolation = cv2.INTER_CUBIC)),[vid_res_x,vid_res_y],setting_color) #renders first frame, while measuring time
+        delay = (1-((time.time()-start_time)*fps)) / fps #Sets delay so that it wont run to fast, based on how long it took to render 1 frame, and based on the videos FPS
         if delay < 0 or setting_output:
-            delay = 0
-        First_Time = False  
+            delay = 0 #Removes the delay if its under 0 (throws error otherwice), or if it doesnt need to render, only generate.
+        First_Time = False  #Removes the first time trigger, so that this code wont be run again, since it jidders the screen slightly everytime the video loops, since it has to rescale the console and everything.
     success = True
     count_ = 0
-    while success:
-        success,image = vidcap.read()    
+    while success: #Loops until there is no more frames in the video
+        success,image = vidcap.read()    #Gets next frame 
         if success:
-            time.sleep(delay)
-            frame_2_ascii((cv2.resize(image,(vid_res_x,vid_res_y),fx=0,fy=0, interpolation = cv2.INTER_CUBIC)),[vid_res_x,vid_res_y],setting_color)
+            time.sleep(delay) #accounts for the delay if rendering a frame is too fast
+            frame_2_ascii((cv2.resize(image,(vid_res_x,vid_res_y),fx=0,fy=0, interpolation = cv2.INTER_CUBIC)),[vid_res_x,vid_res_y],setting_color) #runs the main converter, and scales the image (NEEDS IMPROVEMENT (MAYBE SCALE ALL THE FRAMES FIRST??))------------------!!
             count_ += 1
-    vidcap.release()
+    vidcap.release() #Unloads vidcap
     if setting_loop == False and setting_output == False:
-        wait = input("")
+        wait = input("") #Pauses at the final frame, if not set to loop
 
 if __name__ == "__main__":
-    if setting_output:
+    if setting_output: 
         print("Starting to render frames...")
-        start_time = time.time()
-        main()
-        #os.system("cls")
+        start_time = time.time() #Starts timer
+        main() #Runs the main script
         print("\nAll Frames extracted!, this took {}".format(str((time.time()-start_time))))
         x = input("")
     else:
-        main()
-        while setting_loop:
+        main() #Runs the code once, and...
+        while setting_loop: #... then loops it if looping is on
             main()
