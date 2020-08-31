@@ -141,15 +141,18 @@ def main():
     vidcap.release() #Unloads vidcap
     if setting_loop == False and setting_output == False:
         wait = input("") #Pauses at the final frame, if not set to loop
-
-if __name__ == "__main__":
-    if setting_output: 
-        print("Starting to render frames...")
-        start_time = time.time() #Starts timer
-        main() #Runs the main script
-        print("\nAll Frames extracted!, this took {}".format(str((time.time()-start_time))))
-        x = input("")
-    else:
-        main() #Runs the code once, and...
-        while setting_loop: #... then loops it if looping is on
-            main()
+try:
+    if __name__ == "__main__":
+        if setting_output: 
+            print("Starting to render frames...")
+            start_time = time.time() #Starts timer
+            main() #Runs the main script
+            print("\nAll Frames extracted!, this took {}".format(str((time.time()-start_time))))
+            x = input("")
+        else:
+            main() #Runs the code once, and...
+            while setting_loop: #... then loops it if looping is on
+                main()
+except Exception as e:
+    print(e)
+    x = input("")
